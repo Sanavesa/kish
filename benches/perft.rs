@@ -50,8 +50,14 @@ fn benchmark_perft_scenarios(c: &mut Criterion) {
         &[Square::A1, Square::A8, Square::D4, Square::E5],
         &[Square::H1, Square::H8, Square::D5, Square::E4],
         &[
-            Square::A1, Square::A8, Square::D4, Square::E5,
-            Square::H1, Square::H8, Square::D5, Square::E4,
+            Square::A1,
+            Square::A8,
+            Square::D4,
+            Square::E5,
+            Square::H1,
+            Square::H8,
+            Square::D5,
+            Square::E4,
         ],
     );
     group.bench_function("king_endgame_d6", |b| {
@@ -62,12 +68,24 @@ fn benchmark_perft_scenarios(c: &mut Criterion) {
     let midgame = Board::from_squares(
         Team::White,
         &[
-            Square::A2, Square::B2, Square::C3, Square::D4,
-            Square::E4, Square::F3, Square::G2, Square::H2,
+            Square::A2,
+            Square::B2,
+            Square::C3,
+            Square::D4,
+            Square::E4,
+            Square::F3,
+            Square::G2,
+            Square::H2,
         ],
         &[
-            Square::A7, Square::B7, Square::C6, Square::D5,
-            Square::E5, Square::F6, Square::G7, Square::H7,
+            Square::A7,
+            Square::B7,
+            Square::C6,
+            Square::D5,
+            Square::E5,
+            Square::F6,
+            Square::G7,
+            Square::H7,
         ],
         &[Square::D4, Square::D5],
     );
@@ -80,8 +98,13 @@ fn benchmark_perft_scenarios(c: &mut Criterion) {
         Team::White,
         &[Square::A2, Square::C4, Square::E4, Square::G4],
         &[
-            Square::B3, Square::C5, Square::D5, Square::E5,
-            Square::F5, Square::G5, Square::H5,
+            Square::B3,
+            Square::C5,
+            Square::D5,
+            Square::E5,
+            Square::F5,
+            Square::G5,
+            Square::H5,
         ],
         &[Square::C4, Square::E4],
     );

@@ -15,6 +15,8 @@ A high-performance Turkish Draughts (Dama) engine written in Rust.
 - [API Reference](#api-reference)
 - [Performance](#performance)
 - [Rules Summary](#rules-summary)
+- [Python Bindings](#python-bindings)
+- [Contributing](#contributing)
 - [License](#license)
 
 ## Overview
@@ -187,6 +189,20 @@ See [RULES.md](RULES.md) for the complete official rules.
 - One piece each (automatic draw)
 - Threefold repetition (same position 3 times)
 - 50 plies without capture (insufficient progress)
+
+## Python Bindings
+
+Python bindings are available via PyPI:
+
+```bash
+pip install kish
+```
+
+See [kish-py/README.md](kish-py/README.md) for Python documentation and ML examples.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and release instructions.
 
 ## License
 
