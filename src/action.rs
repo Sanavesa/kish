@@ -830,6 +830,12 @@ impl Action {
 
                         // Try this landing square
                         let old_count = *landing_count;
+                        debug_assert!(
+                            *landing_count < MAX_PATH_LEN - 1,
+                            "landing count {} exceeds maximum path length {}",
+                            *landing_count,
+                            MAX_PATH_LEN - 1
+                        );
                         landings[*landing_count] = check_sq;
                         *landing_count += 1;
 
@@ -879,6 +885,12 @@ impl Action {
 
                 if capture_sq.to_mask() & remaining_captures != 0 {
                     let old_count = *landing_count;
+                    debug_assert!(
+                        *landing_count < MAX_PATH_LEN - 1,
+                        "landing count {} exceeds maximum path length {}",
+                        *landing_count,
+                        MAX_PATH_LEN - 1
+                    );
                     landings[*landing_count] = landing_sq;
                     *landing_count += 1;
 
