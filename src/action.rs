@@ -733,6 +733,7 @@ impl Action {
             dest_mask,
             was_king,
             team,
+            None,
             &mut landings,
             &mut landing_count,
         );
@@ -763,6 +764,7 @@ impl Action {
         final_dest_mask: u64,
         is_king: bool,
         team: Team,
+        prev_direction: Option<(i8, i8)>,
         landings: &mut [Square; MAX_PATH_LEN - 1],
         landing_count: &mut usize,
     ) -> bool {
@@ -793,6 +795,13 @@ impl Action {
         };
 
         for &(row_dir, col_dir) in directions {
+            // Enforce 180° turn prohibition: skip if this direction reverses the previous
+            if let Some((prev_row, prev_col)) = prev_direction {
+                if row_dir == -prev_row && col_dir == -prev_col {
+                    continue;
+                }
+            }
+
             if is_king {
                 // King: find a captured piece and try all possible landing squares after it
                 let mut dist = 1i8;
@@ -832,6 +841,7 @@ impl Action {
                             final_dest_mask,
                             is_king,
                             team,
+                            Some((row_dir, col_dir)),
                             landings,
                             landing_count,
                         ) {
@@ -880,6 +890,7 @@ impl Action {
                         final_dest_mask,
                         is_king,
                         team,
+                        Some((row_dir, col_dir)),
                         landings,
                         landing_count,
                     ) {
