@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "kish"
-version = "1.1.4"
+version = "1.1.5"
 edition = "2021"
 authors = ["sanavesa"]
 description = "A high-performance Turkish Draughts (Dama) engine with bitboard representation"
