@@ -1649,6 +1649,52 @@ mod tests {
         );
     }
 
+    /// Black king at D4 can capture D2 (South) or D6 (North), but NOT both
+    /// since that would require a 180° turn.
+    #[test]
+    fn king_180_turn_prohibited_vertical() {
+        let board = Board::from_squares(
+            Team::Black,
+            &[Square::D2, Square::D6],
+            &[Square::D4],
+            &[Square::D4, Square::D6],
+        );
+
+        let actions = board.actions();
+
+        assert!(!actions.is_empty());
+        for action in &actions {
+            assert_eq!(
+                action.capture_count(Team::Black),
+                1,
+                "180° turn should prevent chaining North->South or South->North captures"
+            );
+        }
+    }
+
+    /// Black king at D4 can capture B4 (West) or F4 (East), but NOT both
+    /// since that would require a 180° turn.
+    #[test]
+    fn king_180_turn_prohibited_horizontal() {
+        let board = Board::from_squares(
+            Team::Black,
+            &[Square::B4, Square::F4],
+            &[Square::D4],
+            &[Square::D4, Square::F4],
+        );
+
+        let actions = board.actions();
+
+        assert!(!actions.is_empty());
+        for action in &actions {
+            assert_eq!(
+                action.capture_count(Team::Black),
+                1,
+                "180° turn should prevent chaining East->West or West->East captures"
+            );
+        }
+    }
+
     // ========== IMMEDIATE PIECE REMOVAL TESTS ==========
     // Rule: Captured pieces are removed immediately, allowing crossing the same square
 
@@ -2498,5 +2544,73 @@ mod tests {
     fn initial_position_white_to_move() {
         let board = Board::new_default();
         assert_eq!(board.turn, Team::White, "White moves first");
+    }
+
+    /// Tests that path reconstruction enforces the 180° turn prohibition
+    /// in complex multi-capture king sequences.
+    ///
+    /// This position has 9 different 10-capture sequences. Path reconstruction
+    /// must find valid paths without 180° reversals for all of them.
+    #[test]
+    fn king_10_capture_path_no_180_turns() {
+        let board = Board::from_squares(
+            Team::White,
+            &[Square::C2, Square::G2, Square::H4],
+            &[
+                Square::C1,
+                Square::E2,
+                Square::C3,
+                Square::B4,
+                Square::D4,
+                Square::A5,
+                Square::E5,
+                Square::B6,
+                Square::D6,
+                Square::H6,
+                Square::C7,
+                Square::H7,
+            ],
+            &[
+                Square::C1,
+                Square::C2,
+                Square::D4,
+                Square::B6,
+                Square::D6,
+                Square::C7,
+            ],
+        );
+
+        let actions = board.actions();
+        assert_eq!(actions.len(), 9, "Expected 9 maximum-capture actions");
+
+        for action in &actions {
+            assert_eq!(
+                action.capture_count(Team::White),
+                10,
+                "All actions should capture 10 pieces"
+            );
+
+            let detailed = action.to_detailed(board.turn, &board.state);
+            let path = detailed.path();
+            let mut prev_dir: Option<(i8, i8)> = None;
+
+            for i in 1..path.len() {
+                let from = path[i - 1];
+                let to = path[i];
+
+                let dcol = (to.column() as i8 - from.column() as i8).signum();
+                let drow = (to.row() as i8 - from.row() as i8).signum();
+
+                if let Some((pcol, prow)) = prev_dir {
+                    assert!(
+                        !(dcol == -pcol && drow == -prow && (dcol != 0 || drow != 0)),
+                        "180° turn detected in path: {} -> {}",
+                        from,
+                        to
+                    );
+                }
+                prev_dir = Some((dcol, drow));
+            }
+        }
     }
 }
