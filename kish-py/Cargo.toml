@@ -1,6 +1,6 @@
 [package]
 name = "kish-py"
-version = "1.1.3"
+version = "1.1.4"
 edition = "2021"
 authors = ["sanavesa"]
 description = "Python bindings for kish - A high-performance Turkish Draughts (Dama) engine"
