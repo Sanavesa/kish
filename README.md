@@ -147,7 +147,7 @@ println!("{}", promo.to_notation()); // "c7-c8=K"
 
 ## Performance
 
-Benchmarks run on AMD Ryzen 9 5900X with `RUSTFLAGS="-C target-cpu=native"`. See [PERFORMANCE.md](PERFORMANCE.md) for the full optimization history.
+Benchmarks run on AMD Ryzen 9 3900X with `RUSTFLAGS="-C target-cpu=native"`. See [PERFORMANCE.md](PERFORMANCE.md) for the full optimization history.
 
 ### Perft (Move Generation)
 
