@@ -143,6 +143,110 @@ const DOWN_RAY: [u64; 64] = {
     rays
 };
 
+/// Precomputed rank attack masks for king sliding moves.
+/// RANK_ATTACKS[sq][occ6] where occ6 is the 6-bit occupancy of columns 1-6.
+/// Returns a bitmask of all squares the king can reach along the rank.
+#[allow(clippy::large_const_arrays)]
+const RANK_ATTACKS: [[u64; 64]; 64] = {
+    let mut table = [[0u64; 64]; 64];
+    let mut sq = 0usize;
+    while sq < 64 {
+        let col = sq % 8;
+        let row_start = sq - col;
+
+        let mut occ6 = 0usize;
+        while occ6 < 64 {
+            // Expand 6-bit occupancy to full row (bits 1-6)
+            let occ = (occ6 as u64) << 1;
+            let mut attacks = 0u64;
+
+            // Move left
+            let mut c = col as i8 - 1;
+            while c >= 0 {
+                attacks |= 1u64 << (row_start + c as usize);
+                if (occ & (1u64 << c)) != 0 {
+                    break;
+                }
+                c -= 1;
+            }
+
+            // Move right
+            c = col as i8 + 1;
+            while c < 8 {
+                attacks |= 1u64 << (row_start + c as usize);
+                if (occ & (1u64 << c)) != 0 {
+                    break;
+                }
+                c += 1;
+            }
+
+            table[sq][occ6] = attacks;
+            occ6 += 1;
+        }
+        sq += 1;
+    }
+    table
+};
+
+/// Precomputed file attack masks for king sliding moves.
+/// FILE_ATTACKS[sq][occ6] where occ6 is the 6-bit occupancy of rows 1-6.
+/// Returns a bitmask of all squares the king can reach along the file.
+#[allow(clippy::large_const_arrays)]
+const FILE_ATTACKS: [[u64; 64]; 64] = {
+    let mut table = [[0u64; 64]; 64];
+    let mut sq = 0usize;
+    while sq < 64 {
+        let col = sq % 8;
+        let row = sq / 8;
+
+        let mut occ6 = 0usize;
+        while occ6 < 64 {
+            // Expand 6-bit occupancy to full file (rows 1-6)
+            let occ = (occ6 as u64) << 1;
+            let mut attacks = 0u64;
+
+            // Move down
+            let mut r = row as i8 - 1;
+            while r >= 0 {
+                attacks |= 1u64 << (r as usize * 8 + col);
+                if (occ & (1u64 << r)) != 0 {
+                    break;
+                }
+                r -= 1;
+            }
+
+            // Move up
+            r = row as i8 + 1;
+            while r < 8 {
+                attacks |= 1u64 << (r as usize * 8 + col);
+                if (occ & (1u64 << r)) != 0 {
+                    break;
+                }
+                r += 1;
+            }
+
+            table[sq][occ6] = attacks;
+            occ6 += 1;
+        }
+        sq += 1;
+    }
+    table
+};
+
+/// Masks to extract the relevant 6 bits for rank occupancy (columns 1-6).
+const RANK_OCC_MASK: [u64; 64] = {
+    let mut masks = [0u64; 64];
+    let mut sq = 0;
+    while sq < 64 {
+        let col = sq % 8;
+        let row_start = sq - col;
+        // Columns 1-6 (bits 1-6 of the row)
+        masks[sq] = 0x7Eu64 << row_start;
+        sq += 1;
+    }
+    masks
+};
+
 const WHITE_PAWN_MOVES: [u64; 64] = {
     let mut moves = [0u64; 64];
     let mut src_index = 0;
@@ -286,53 +390,44 @@ impl Board {
         count
     }
 
-    /// Count king moves using direction scanning.
+    /// Count king moves using precomputed attack tables.
+    /// This is much faster than iterating per-direction.
     #[inline]
     fn count_king_moves<const TEAM_INDEX: usize>(&self, empty: u64) -> u64 {
+        let occupied = !empty;
         let mut friendly_kings = self.friendly_pieces() & self.state.kings;
         let mut count = 0u64;
 
         while friendly_kings != 0 {
             let src_mask = friendly_kings & friendly_kings.wrapping_neg();
+            let sq = src_mask.trailing_zeros() as usize;
 
-            // Count moves in each direction
-            count += Self::count_ray_moves(src_mask, empty, -1i8, MASK_COL_A); // left
-            count += Self::count_ray_moves(src_mask, empty, 1i8, MASK_COL_H); // right
-            count += Self::count_ray_moves(src_mask, empty, 8i8, MASK_ROW_8); // up
-            count += Self::count_ray_moves(src_mask, empty, -8i8, MASK_ROW_1); // down
+            // Get king attacks using lookup tables
+            let attacks = Self::king_attacks_lut(sq, occupied);
+            count += (attacks & empty).count_ones() as u64;
 
             friendly_kings ^= src_mask;
         }
         count
     }
 
-    /// Count moves along a ray direction until blocked or edge.
-    #[inline]
-    fn count_ray_moves(src_mask: u64, empty: u64, direction: i8, edge_mask: u64) -> u64 {
-        let mut count = 0u64;
-        let mut pos = src_mask;
+    /// Get all squares a king can attack from a given square using lookup tables.
+    /// This uses precomputed rank and file attack tables indexed by occupancy.
+    #[inline(always)]
+    fn king_attacks_lut(sq: usize, occupied: u64) -> u64 {
+        // Extract 6-bit occupancy for rank (columns 1-6)
+        let rank_occ = (occupied & RANK_OCC_MASK[sq]) >> (sq - sq % 8 + 1);
+        let rank_occ6 = rank_occ as usize & 0x3F;
 
-        loop {
-            // Stop if at edge
-            if pos & edge_mask != 0 {
-                break;
-            }
+        // Extract 6-bit occupancy for file (rows 1-6)
+        // We need to compress the file bits into 6 consecutive bits
+        let col = sq % 8;
+        let file_bits = (occupied >> col) & 0x0101_0101_0101_0101u64;
+        // Multiply trick to gather bits: multiply by a magic number and shift
+        let file_occ6 = ((file_bits.wrapping_mul(0x0002_0408_1020_4080u64)) >> 57) as usize & 0x3F;
 
-            // Move in direction
-            pos = if direction > 0 {
-                pos << direction as u32
-            } else {
-                pos >> (-direction) as u32
-            };
-
-            // Stop if blocked
-            if pos & empty == 0 {
-                break;
-            }
-
-            count += 1;
-        }
-        count
+        // Lookup attacks from precomputed tables
+        RANK_ATTACKS[sq][rank_occ6] | FILE_ATTACKS[sq][file_occ6]
     }
 
     /// Quick check if any pawn captures are possible using bulk bitboard ops.
@@ -867,65 +962,29 @@ impl Board {
         }
     }
 
+    /// Generate king moves using precomputed attack tables.
+    /// Gets all attack squares in one lookup, then iterates destinations.
     #[inline]
     fn generate_king_moves<const TEAM_INDEX: usize>(&self, actions: &mut Vec<Action>, empty: u64) {
+        let occupied = !empty;
         let mut friendly_kings = self.friendly_pieces() & self.state.kings;
+
         while friendly_kings != 0u64 {
-            let src_mask = friendly_kings & friendly_kings.wrapping_neg(); // get lowest set bit
+            let src_mask = friendly_kings & friendly_kings.wrapping_neg();
+            let sq = src_mask.trailing_zeros() as usize;
 
-            // Generate king left moves
-            let mut left_dest_mask = src_mask & !MASK_COL_A;
-            while left_dest_mask != 0u64 {
-                left_dest_mask = (left_dest_mask >> 1u8) & empty;
-                if left_dest_mask != 0u64 {
-                    actions.push(Action::new_move_as_king::<TEAM_INDEX>(
-                        src_mask,
-                        left_dest_mask,
-                    ));
-                }
-                left_dest_mask &= !MASK_COL_A;
+            // Get all attack squares using lookup table
+            let attacks = Self::king_attacks_lut(sq, occupied);
+            let mut moves = attacks & empty;
+
+            // Iterate through all destination squares
+            while moves != 0u64 {
+                let dest_mask = moves & moves.wrapping_neg();
+                actions.push(Action::new_move_as_king::<TEAM_INDEX>(src_mask, dest_mask));
+                moves ^= dest_mask;
             }
 
-            // Generate king right moves
-            let mut right_dest_mask = src_mask & !MASK_COL_H;
-            while right_dest_mask != 0u64 {
-                right_dest_mask = (right_dest_mask << 1u8) & empty;
-                if right_dest_mask != 0u64 {
-                    actions.push(Action::new_move_as_king::<TEAM_INDEX>(
-                        src_mask,
-                        right_dest_mask,
-                    ));
-                }
-                right_dest_mask &= !MASK_COL_H;
-            }
-
-            // Generate king up moves
-            let mut up_dest_mask = src_mask & !MASK_ROW_8;
-            while up_dest_mask != 0u64 {
-                up_dest_mask = (up_dest_mask << 8u8) & empty;
-                if up_dest_mask != 0u64 {
-                    actions.push(Action::new_move_as_king::<TEAM_INDEX>(
-                        src_mask,
-                        up_dest_mask,
-                    ));
-                }
-                up_dest_mask &= !MASK_ROW_8;
-            }
-
-            // Generate king down moves
-            let mut down_dest_mask = src_mask & !MASK_ROW_1;
-            while down_dest_mask != 0u64 {
-                down_dest_mask = (down_dest_mask >> 8u8) & empty;
-                if down_dest_mask != 0u64 {
-                    actions.push(Action::new_move_as_king::<TEAM_INDEX>(
-                        src_mask,
-                        down_dest_mask,
-                    ));
-                }
-                down_dest_mask &= !MASK_ROW_1;
-            }
-
-            friendly_kings ^= src_mask; // clear lowest set bit
+            friendly_kings ^= src_mask;
         }
     }
 }

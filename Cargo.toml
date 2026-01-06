@@ -41,8 +41,10 @@ harness = false
 debug = false
 lto = true
 codegen-units = 1
+panic = "abort"
 
 [profile.bench]
 debug = false
 lto = true
 codegen-units = 1
+panic = "abort"
