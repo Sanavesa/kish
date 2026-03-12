@@ -63,7 +63,7 @@
 //!
 //! # Insufficient Progress (Rule 9.4)
 //!
-//! A draw is declared after 50 consecutive plies (25 full moves) without any
+//! A draw is declared after 150 consecutive plies (75 full moves) without any
 //! capture. This prevents indefinitely prolonged endgames.
 
 use rustc_hash::FxHashMap;
@@ -76,8 +76,8 @@ type PositionHash = u64;
 /// Number of half-moves (plies) without a capture before a draw is declared.
 ///
 /// Per Rule 9.4, a draw occurs after this many consecutive plies without capture.
-/// Set to 50 plies (25 full moves).
-const INSUFFICIENT_PROGRESS_THRESHOLD: u16 = 50;
+/// Set to 150 plies (75 full moves).
+const INSUFFICIENT_PROGRESS_THRESHOLD: u16 = 150;
 
 /// A full game with history tracking for proper draw detection.
 ///
@@ -186,7 +186,7 @@ impl Game {
     /// 2. Win by blocking the opponent
     /// 3. Draw by 1v1 (Rule 9.3)
     /// 4. Draw by threefold repetition (Rule 9.2)
-    /// 5. Draw by insufficient progress (Rule 9.4) - 50 plies without capture
+    /// 5. Draw by insufficient progress (Rule 9.4) - 150 plies without capture
     #[must_use]
     pub fn status(&self) -> GameStatus {
         // First check basic status (win/loss/1v1 draw)
@@ -639,7 +639,7 @@ mod tests {
     #[test]
     fn insufficient_progress_threshold_is_configurable() {
         // Verify the const is used correctly
-        assert_eq!(INSUFFICIENT_PROGRESS_THRESHOLD, 50);
+        assert_eq!(INSUFFICIENT_PROGRESS_THRESHOLD, 150);
     }
 
     #[test]

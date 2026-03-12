@@ -85,7 +85,7 @@
 //! ## Key Types
 //!
 //! - [`Board`]: The main game state containing piece positions and current turn
-//! - [`Game`]: Full game with history tracking for draw detection (threefold repetition, 50-move rule)
+//! - [`Game`]: Full game with history tracking for draw detection (threefold repetition, 150-move rule)
 //! - [`Action`]: A move represented as a bitboard delta (fast for simulations)
 //! - [`ActionPath`]: A move with full path information (for UI/notation)
 //! - [`Square`]: A single square on the board (0-63)

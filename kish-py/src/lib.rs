@@ -298,7 +298,7 @@ impl From<Square> for kish_core::Square {
 ///
 /// A game can be in one of three states:
 /// - **In Progress**: The game is ongoing
-/// - **Draw**: The game ended in a draw (1v1, threefold repetition, or 50-move rule)
+/// - **Draw**: The game ended in a draw (1v1, threefold repetition, or 150-move rule)
 /// - **Won**: A player has won (captured all pieces or blocked opponent)
 ///
 /// # Example
@@ -827,7 +827,7 @@ impl Board {
 ///
 /// `Game` wraps [`Board`] and adds history tracking for:
 /// - **Threefold repetition**: Draw when same position occurs 3 times
-/// - **50-move rule**: Draw after 50 moves without capture
+/// - **150-move rule**: Draw after 150 moves without capture
 /// - **Undo functionality**: Revert to previous positions
 ///
 /// Use `Game` for playing full games. For pure move generation (AI search, perft),

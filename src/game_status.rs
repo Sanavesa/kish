@@ -16,7 +16,7 @@
 //! The game is a draw when:
 //! - Both players have exactly one piece each (Rule 9.3)
 //! - Threefold repetition occurs (Rule 9.2) - tracked by [`Game`](crate::Game)
-//! - 50 consecutive plies without capture (Rule 9.4) - tracked by [`Game`](crate::Game)
+//! - 150 consecutive plies without capture (Rule 9.4) - tracked by [`Game`](crate::Game)
 //!
 //! # Example
 //!

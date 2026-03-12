@@ -40,9 +40,9 @@ fn main() {
             break;
         }
 
-        // Check for 50-move rule
-        if game.halfmove_clock() >= 50 {
-            println!("\nDraw by 50-move rule!");
+        // Check for 150-move rule
+        if game.halfmove_clock() >= 150 {
+            println!("\nDraw by 150-move rule!");
             break;
         }
     }
