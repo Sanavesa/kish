@@ -45,6 +45,16 @@ cache-keys = [
     { file = "pyproject.toml" },
     { file = "Cargo.toml" },
     { file = "src/**/*.rs" },
+    # uv does not expand globs outside the project directory: list engine files
     { file = "../Cargo.toml" },
-    { file = "../src/**/*.rs" },
+    { file = "../src/action.rs" },
+    { file = "../src/actiongen.rs" },
+    { file = "../src/board.rs" },
+    { file = "../src/game.rs" },
+    { file = "../src/game_status.rs" },
+    { file = "../src/lib.rs" },
+    { file = "../src/perft.rs" },
+    { file = "../src/square.rs" },
+    { file = "../src/state.rs" },
+    { file = "../src/team.rs" },
 ]
