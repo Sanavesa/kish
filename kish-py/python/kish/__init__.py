@@ -2,4 +2,6 @@
 from .kish import Team, Square, GameStatus, Action, Board, Game
 
 __all__ = ["Team", "Square", "GameStatus", "Action", "Board", "Game"]
-__version__ = "1.0.0"
+from importlib.metadata import version as _dist_version
+
+__version__ = _dist_version("kish")

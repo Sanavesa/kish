@@ -689,7 +689,9 @@ impl Board {
         Self::mask_to_squares(self.inner.hostile_pieces())
     }
 
-    /// Returns a rotated copy of the board (180 degrees).
+    /// Returns the board seen from the other side: squares rotated 180 degrees AND
+    /// colours swapped (White's pieces become Black's and vice versa). The side to move
+    /// is unchanged.
     #[must_use]
     fn rotate(&self) -> Self {
         Self {

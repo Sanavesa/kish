@@ -38,3 +38,13 @@ features = ["pyo3/extension-module"]
 python-source = "python"
 module-name = "kish"
 exclude = ["examples/**", "tests/**"]
+
+[tool.uv]
+# Rebuild when the binding or the core engine sources change (local path installs)
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "Cargo.toml" },
+    { file = "src/**/*.rs" },
+    { file = "../Cargo.toml" },
+    { file = "../src/**/*.rs" },
+]
