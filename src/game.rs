@@ -95,7 +95,7 @@ pub struct Game {
     /// Count of each position occurrence for threefold repetition detection.
     /// Keyed by the exact position (pieces, kings and side to move), so distinct
     /// positions can never share a count.
-    position_counts: FxHashMap<Board, u8>,
+    position_counts: FxHashMap<Board, u32>,
     /// Number of half-moves since last capture.
     /// A draw is declared at [`INSUFFICIENT_PROGRESS_THRESHOLD`] half-moves.
     halfmove_clock: u16,
@@ -230,7 +230,7 @@ impl Game {
         if is_capture {
             self.halfmove_clock = 0;
         } else {
-            self.halfmove_clock += 1;
+            self.halfmove_clock = self.halfmove_clock.saturating_add(1);
         }
 
         // Record position for repetition detection
@@ -271,11 +271,13 @@ impl Game {
         self.position_occurrence_count() >= 3
     }
 
-    /// Returns the number of times the current position has occurred.
+    /// Returns the number of times the current position has occurred
+    /// (capped at `u8::MAX`; the internal count is exact).
     #[inline]
     #[must_use]
     pub fn position_occurrence_count(&self) -> u8 {
-        self.position_counts.get(&self.board).copied().unwrap_or(0)
+        let count = self.position_counts.get(&self.board).copied().unwrap_or(0);
+        u8::try_from(count).unwrap_or(u8::MAX)
     }
 
     /// Clears the position history and resets the halfmove clock.
@@ -641,6 +643,47 @@ mod tests {
                 depth, game_result, depth, board_result
             );
         }
+    }
+
+    #[test]
+    fn repetition_count_does_not_wrap() {
+        // Keep shuffling kings past a threefold draw: the count used to be a u8 that
+        // wrapped to 0 on the 256th occurrence, so the draw silently disappeared.
+        let board = Board::from_squares(
+            Team::White,
+            &[Square::A1, Square::A3],
+            &[Square::H8, Square::H6],
+            &[Square::A1, Square::H8],
+        );
+        let mut game = Game::from_board(board);
+        let cycle = |game: &mut Game| {
+            for (from, to) in [
+                (Square::A1, Square::B1),
+                (Square::H8, Square::G8),
+                (Square::B1, Square::A1),
+                (Square::G8, Square::H8),
+            ] {
+                let team = game.turn().to_usize();
+                let action = game
+                    .actions()
+                    .into_iter()
+                    .find(|a| a.delta.pieces[team] == from.to_mask() | to.to_mask())
+                    .expect("shuffle move is legal");
+                game.make_move(&action);
+            }
+        };
+
+        for _ in 0..300 {
+            cycle(&mut game);
+        }
+        assert_eq!(game.position_occurrence_count(), u8::MAX);
+        assert!(game.is_threefold_repetition());
+
+        // Undo stays exact past the cap
+        for _ in 0..299 * 4 {
+            game.undo_move();
+        }
+        assert_eq!(game.position_occurrence_count(), 2);
     }
 
     #[test]
