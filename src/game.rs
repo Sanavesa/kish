@@ -70,9 +70,6 @@ use rustc_hash::FxHashMap;
 
 use crate::{Action, Board, GameStatus, Team};
 
-/// Hash type for position lookup (single u64 for fast hashing).
-type PositionHash = u64;
-
 /// Number of half-moves (plies) without a capture before a draw is declared.
 ///
 /// Per Rule 9.4, a draw occurs after this many consecutive plies without capture.
@@ -96,7 +93,9 @@ pub struct Game {
     /// The current board state.
     board: Board,
     /// Count of each position occurrence for threefold repetition detection.
-    position_counts: FxHashMap<PositionHash, u8>,
+    /// Keyed by the exact position (pieces, kings and side to move), so distinct
+    /// positions can never share a count.
+    position_counts: FxHashMap<Board, u8>,
     /// Number of half-moves since last capture.
     /// A draw is declared at [`INSUFFICIENT_PROGRESS_THRESHOLD`] half-moves.
     halfmove_clock: u16,
@@ -269,16 +268,14 @@ impl Game {
     #[inline]
     #[must_use]
     pub fn is_threefold_repetition(&self) -> bool {
-        let hash = self.position_hash();
-        self.position_counts.get(&hash).copied().unwrap_or(0) >= 3
+        self.position_occurrence_count() >= 3
     }
 
     /// Returns the number of times the current position has occurred.
     #[inline]
     #[must_use]
     pub fn position_occurrence_count(&self) -> u8 {
-        let hash = self.position_hash();
-        self.position_counts.get(&hash).copied().unwrap_or(0)
+        self.position_counts.get(&self.board).copied().unwrap_or(0)
     }
 
     /// Clears the position history and resets the halfmove clock.
@@ -334,32 +331,19 @@ impl Game {
     // Private helpers
     // =========================================================================
 
-    /// Computes a hash for the current position (state + turn).
-    #[inline]
-    fn position_hash(&self) -> PositionHash {
-        // XOR mixing with golden ratio constants for good distribution
-        let mut hash = self.board.state.pieces[0];
-        hash ^= self.board.state.pieces[1].wrapping_mul(0x9e37_79b9_7f4a_7c15);
-        hash ^= self.board.state.kings.wrapping_mul(0x517c_c1b7_2722_0a95);
-        hash ^= (self.board.turn.to_usize() as u64).wrapping_mul(0x2545_f491_4f6c_dd1d);
-        hash
-    }
-
     /// Records the current position in the occurrence map.
     #[inline]
     fn record_position(&mut self) {
-        let hash = self.position_hash();
-        *self.position_counts.entry(hash).or_insert(0) += 1;
+        *self.position_counts.entry(self.board).or_insert(0) += 1;
     }
 
     /// Decrements the position count for the current position.
     #[inline]
     fn decrement_position_count(&mut self) {
-        let hash = self.position_hash();
-        if let Some(count) = self.position_counts.get_mut(&hash) {
+        if let Some(count) = self.position_counts.get_mut(&self.board) {
             *count = count.saturating_sub(1);
             if *count == 0 {
-                self.position_counts.remove(&hash);
+                self.position_counts.remove(&self.board);
             }
         }
     }

@@ -390,6 +390,60 @@ fn position_count_removed_on_undo() {
 }
 
 // =============================================================================
+// Repetition counts must be exact
+// =============================================================================
+
+/// Plays the legal action with the given notation.
+fn play(game: &mut Game, notation: &str) {
+    let board = *game.board();
+    let action = game
+        .actions()
+        .into_iter()
+        .find(|a| a.to_detailed(board.turn, &board.state).to_notation() == notation)
+        .unwrap_or_else(|| panic!("{notation} is not legal"));
+    game.make_move(&action);
+}
+
+/// Rule 9.2: Only the same position counts as a repetition. Positions used to be
+/// counted by a weak 64-bit hash in which a king on H8 hashed like an empty H8, so
+/// distinct positions shared a count and could produce a false threefold draw.
+#[test]
+fn distinct_positions_do_not_share_repetition_count() {
+    let board = Board::from_squares(
+        Team::White,
+        &[Square::G1, Square::D3, Square::G6, Square::B7],
+        &[Square::A1, Square::F8],
+        &[
+            Square::G1,
+            Square::D3,
+            Square::G6,
+            Square::B7,
+            Square::A1,
+            Square::F8,
+        ],
+    );
+    let mut game = Game::from_board(board);
+    let mut seen = std::collections::HashMap::new();
+    seen.insert(*game.board(), 1u8);
+
+    // The position after f2xc2 is new, but shared a hash with an earlier one.
+    for notation in [
+        "g1-g2", "f8-d8", "d3-c3", "d8-e8", "g2-g5", "a1-h1", "c3-c2", "e8-e3", "c2-f2", "e3-e2",
+        "f2xc2",
+    ] {
+        play(&mut game, notation);
+        let count = seen.entry(*game.board()).or_insert(0);
+        *count += 1;
+        assert_eq!(
+            game.position_occurrence_count(),
+            *count,
+            "wrong repetition count after {notation}"
+        );
+    }
+    assert_eq!(game.position_occurrence_count(), 1);
+}
+
+// =============================================================================
 // Regression tests for status()/actions() bugs found in the kish-ai audit
 // =============================================================================
 
