@@ -481,13 +481,16 @@ mod tests {
     #[test]
     fn perft_depth_7() {
         let board = Board::new_default();
-        assert_eq!(board.perft(7), 10_782_382);
+        // Duplicate capture actions (same resulting position) are generated once, so
+        // these counts are 74 / 4658 lower than before deduplication (10_782_382 /
+        // 123_290_300); depths <= 6 contain no duplicates.
+        assert_eq!(board.perft(7), 10_782_308);
     }
 
     #[test]
     fn perft_depth_8() {
         let board = Board::new_default();
-        assert_eq!(board.perft(8), 123_290_300);
+        assert_eq!(board.perft(8), 123_285_642);
     }
 
     #[test]

@@ -539,8 +539,14 @@ impl Board {
             *max_length = length;
             actions.push(action);
         } else if length == *max_length {
-            // Equal to best - just add
-            actions.push(action);
+            // Equal to best - add unless an identical action (same delta, i.e. same
+            // resulting position) was already generated. Different capture orders over
+            // the same pieces to the same landing square, and the two directions of a
+            // king loop back to its start, produce identical actions; returning them
+            // twice makes callers that index moves (e.g. MCTS) treat one move as two.
+            if !actions.iter().any(|a| a.delta == action.delta) {
+                actions.push(action);
+            }
         }
         // length < max_length: discard
     }
