@@ -217,7 +217,7 @@ A player **wins** the game by:
 
 1. **Capturing all opponent's pieces** - The opponent has no pieces remaining on the board
 
-2. **Blocking all opponent's pieces** - The opponent has pieces remaining but none of them can make a legal move (all are blocked)
+2. **Blocking all opponent's pieces** - The opponent has pieces remaining but none of them can make a legal move when it is their turn (all are blocked)
 
 ---
 
@@ -232,13 +232,13 @@ Both players agree to a draw.
 The same position occurs **three times** with the same player to move. The positions do not need to be consecutive.
 
 ### 9.3 One Piece Each
-Both players have only **one piece remaining** each (regardless of whether they are men or kings).
+Both players have only **one piece remaining** each (regardless of whether they are men or kings) — unless the player to move can capture the opponent's last piece immediately, which wins (Section 8.1).
 
 ### 9.4 Insufficient Progress (Optional/Tournament Rule)
-A draw is declared after **50 consecutive plies** (25 full moves) without any capture. This prevents indefinitely prolonged endgames.
+A draw is declared after **150 consecutive plies** (75 full moves) without any capture (only captures reset the count). This prevents indefinitely prolonged endgames.
 
 ### 9.5 Mutual Block
-If both players have pieces remaining but **neither player can make a legal move** (both are completely blocked), the game is a draw. This differs from one-sided blocking, which is a loss for the blocked player.
+Being blocked is only decided on a player's own turn: the player to move who has no legal move loses (Section 8.2), even if the opponent would also be blocked. A player whose opponent is blocked must still make a move, which may free the opponent.
 
 ---
 

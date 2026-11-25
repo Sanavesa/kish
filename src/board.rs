@@ -209,19 +209,20 @@ impl Board {
             return GameStatus::Won(self.turn);
         }
 
-        // If both teams have a single piece, it is a draw
-        if friendly_pieces.is_power_of_two() && hostile_pieces.is_power_of_two() {
-            return GameStatus::Draw;
-        }
-
-        // If friendlies have no actions, then hostiles have won
+        // If friendlies have no actions, then hostiles have won. Being blocked only
+        // loses on your own turn: the opponent being blocked while it is our turn is not
+        // a result, since our (possibly forced) move may free them.
         if self.is_blocked() {
             return GameStatus::Won(self.turn.opponent());
         }
 
-        // If hostiles have no actions, then friendlies have won
-        if self.rotate().is_blocked() {
-            return GameStatus::Won(self.turn);
+        // If both teams have a single piece, it is a draw - unless the side to move can
+        // capture the last hostile piece right now, which wins (rule 8.1).
+        if friendly_pieces.is_power_of_two()
+            && hostile_pieces.is_power_of_two()
+            && !self.can_capture_any()
+        {
+            return GameStatus::Draw;
         }
 
         // Otherwise, the game is in progress
@@ -243,8 +244,10 @@ impl Board {
             return false;
         }
 
-        // Check if any piece can make a simple capture (pawn: 2 squares, jumping 1 hostile)
-        if self.can_any_piece_capture_simple(friendly_pieces, hostile_pieces, empty) {
+        // Check if any piece can make a simple capture (jumping 1 adjacent hostile),
+        // including a king's backward capture
+        if self.can_any_piece_capture_simple(friendly_pieces, friendly_kings, hostile_pieces, empty)
+        {
             return false;
         }
 
@@ -253,6 +256,14 @@ impl Board {
         // - Non-adjacent hostile (via ray) → requires empty adjacent squares → found by can_any_piece_move
 
         true
+    }
+
+    /// Whether the side to move has any capture (used only for the one-piece-each
+    /// check, so the full move generator's cost is irrelevant).
+    fn can_capture_any(&self) -> bool {
+        self.actions()
+            .first()
+            .is_some_and(|action| action.is_capture(self.turn))
     }
 
     /// Checks if any piece can make a simple 1-square move.
@@ -293,6 +304,7 @@ impl Board {
     const fn can_any_piece_capture_simple(
         &self,
         friendly_pieces: u64,
+        friendly_kings: u64,
         hostile_pieces: u64,
         empty: u64,
     ) -> bool {
@@ -321,7 +333,21 @@ impl Board {
                     & empty
             }
         };
-        vertical_captures != 0
+        if vertical_captures != 0 {
+            return true;
+        }
+
+        // Backward vertical capture (kings only). Missing this made a boxed king whose
+        // only legal move is a backward capture count as blocked (a loss).
+        let backward_king_captures = match self.turn {
+            Team::White => {
+                (((friendly_kings & !(MASK_ROW_1 | MASK_ROW_2)) >> 8) & hostile_pieces) >> 8 & empty
+            }
+            Team::Black => {
+                (((friendly_kings & !(MASK_ROW_7 | MASK_ROW_8)) << 8) & hostile_pieces) << 8 & empty
+            }
+        };
+        backward_king_captures != 0
     }
 }
 
@@ -503,7 +529,7 @@ mod tests {
     }
 
     #[test]
-    fn status_hostile_blocked() {
+    fn status_hostile_blocked_is_not_a_result_on_our_turn() {
         let board = Board::from_squares(
             Team::White,
             &[
@@ -517,7 +543,15 @@ mod tests {
             &[Square::A4, Square::A5],
             &[],
         );
-        assert_eq!(board.status(), GameStatus::Won(Team::White));
+        // Black is blocked, but it is White's turn: being blocked only loses on your
+        // own turn, and most White moves here free Black (e.g. c5-c6 allows a5xc5).
+        assert_eq!(board.status(), GameStatus::InProgress);
+        let freeing = board
+            .actions()
+            .into_iter()
+            .filter(|a| !board.apply(a).swap_turn().actions().is_empty())
+            .count();
+        assert!(freeing > 0);
     }
 
     #[test]

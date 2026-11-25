@@ -63,9 +63,9 @@ fn blocked_player_loses_white_blocked() {
 /// Rule 8.2: Block all opponent's pieces - black blocked
 #[test]
 fn blocked_player_loses_black_blocked() {
-    // Black pieces blocked
+    // Black pieces blocked, Black to move (being blocked only loses on your own turn)
     let board = Board::from_squares(
-        Team::White,
+        Team::Black,
         &[
             Square::A2,
             Square::A3,

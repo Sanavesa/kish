@@ -192,6 +192,16 @@ fn one_king_vs_one_pawn_is_draw() {
     );
 }
 
+/// Rule 9.3 / 8.1: one piece each is NOT a draw when the side to move can capture the
+/// other piece (capturing all hostile pieces wins)
+#[test]
+fn one_piece_each_with_capture_available_is_not_draw() {
+    let board = Board::from_squares(Team::White, &[Square::D4], &[Square::D5], &[Square::D4]);
+    assert_ne!(board.status(), GameStatus::Draw);
+    let after = board.apply(&board.actions()[0]).swap_turn();
+    assert_eq!(after.status(), GameStatus::Won(Team::White));
+}
+
 /// Rule 9.3: Two pieces vs one is NOT draw
 #[test]
 fn two_vs_one_is_not_draw() {
@@ -207,7 +217,7 @@ fn one_piece_each_draw_regardless_of_position() {
     let test_cases = [
         (Square::A1, Square::H8),
         (Square::D4, Square::E5),
-        (Square::A8, Square::H1),
+        (Square::A7, Square::H2), // men may not stand on their promotion row
         (Square::D1, Square::D8),
     ];
 
@@ -377,4 +387,77 @@ fn position_count_removed_on_undo() {
         1,
         "Initial position should still have count 1 after undo"
     );
+}
+
+// =============================================================================
+// Regression tests for status()/actions() bugs found in the kish-ai audit
+// =============================================================================
+
+/// A boxed king whose only legal move is a backward capture is not blocked.
+#[test]
+fn king_backward_capture_is_not_blocked() {
+    let board = Board::from_squares(
+        Team::White,
+        &[Square::A8, Square::B8],
+        &[Square::A7, Square::B7, Square::B6, Square::C8, Square::D8],
+        &[Square::A8, Square::B8, Square::C8, Square::D8],
+    );
+    assert!(!board.actions().is_empty());
+    assert_eq!(board.status(), GameStatus::InProgress);
+}
+
+/// The opponent being blocked is not a result while it is our turn.
+#[test]
+fn opponent_blocked_on_our_turn_is_in_progress() {
+    // White d4, e6 vs Black men d6 d7 c5 b5 e5 f5 e7 c6 f6 g6 and king e8. After d4-d5
+    // White is blocked, but Black's only move d6xd4 frees White again.
+    let board = Board::from_squares(
+        Team::White,
+        &[Square::D4, Square::E6],
+        &[
+            Square::D6,
+            Square::D7,
+            Square::C5,
+            Square::B5,
+            Square::E5,
+            Square::F5,
+            Square::E7,
+            Square::C6,
+            Square::F6,
+            Square::G6,
+            Square::E8,
+        ],
+        &[Square::E8],
+    );
+    let push = board
+        .actions()
+        .into_iter()
+        .find(|a| a.to_detailed(Team::White, &board.state).to_notation() == "d4-d5")
+        .expect("d4-d5 is legal");
+    let after = board.apply(&push).swap_turn();
+    assert_eq!(after.status(), GameStatus::InProgress);
+}
+
+/// Capture sequences reaching the same position are generated once, and a king loop
+/// back to its start square reports a valid path.
+#[test]
+fn no_duplicate_actions_and_king_loop_path() {
+    let board = Board::from_squares(
+        Team::White,
+        &[Square::B2],
+        &[Square::D2, Square::F4, Square::D6, Square::B4, Square::H8],
+        &[Square::B2],
+    );
+    let actions = board.actions();
+    for (i, a) in actions.iter().enumerate() {
+        for b in &actions[i + 1..] {
+            assert_ne!(a.delta, b.delta, "duplicate action");
+        }
+    }
+    let loops: Vec<_> = actions.iter().filter(|a| a.delta.pieces[0] == 0).collect();
+    assert_eq!(loops.len(), 1);
+    let path = loops[0].to_detailed(Team::White, &board.state);
+    assert_eq!(path.source(), Square::B2);
+    assert_eq!(path.destination(), Square::B2);
+    assert_eq!(path.path_len(), 5, "4 captures: start + 4 landings");
 }
