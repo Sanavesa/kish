@@ -118,7 +118,7 @@ def test_action_delta():
     white_delta, black_delta, kings_delta = action.delta()
 
     # For a simple white move, white_delta should have 2 bits set (src and dst)
-    assert white_delta.bit_count() == 2
+    assert bin(white_delta).count("1") == 2  # int.bit_count() needs Python 3.10+
     assert black_delta == 0  # No black pieces affected
     assert kings_delta == 0  # No kings in starting position
 
