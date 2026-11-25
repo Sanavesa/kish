@@ -45,7 +45,9 @@ impl Board {
     /// Perft (performance test) - counts leaf nodes at a given depth.
     ///
     /// This is the standard metric for verifying move generation correctness.
-    /// Each unique position at the target depth is counted exactly once.
+    /// It counts move sequences, not unique positions: a position reached by two
+    /// move orders is counted twice. A position with no legal moves before the
+    /// target depth counts as one leaf.
     ///
     /// # Example
     ///
