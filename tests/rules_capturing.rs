@@ -452,6 +452,96 @@ fn equal_length_captures_all_available() {
     }
 }
 
+/// Rule 6.6: Two routes that capture the same pieces and end on the same square
+/// are the same move, and are generated once
+#[test]
+fn equal_length_routes_to_same_position_generated_once() {
+    // King at H2, enemies at H4 and H7. The king may land on H5 or H6 after
+    // capturing H4, and from either square capture H7 and land on H8:
+    // h2xh5xh8 and h2xh6xh8 reach the same position, so only one action is legal.
+    let board = Board::from_squares(
+        Team::White,
+        &[Square::H2],
+        &[Square::H4, Square::H7],
+        &[Square::H2],
+    );
+    let actions = board.actions();
+
+    assert_eq!(actions.len(), 1, "Both routes are the same move");
+    assert_eq!(
+        actions[0].delta.pieces[Team::Black.to_usize()],
+        Square::H4.to_mask() | Square::H7.to_mask()
+    );
+    let path = actions[0].to_detailed(Team::White, &board.state);
+    assert_eq!(path.source(), Square::H2);
+    assert_eq!(path.destination(), Square::H8);
+}
+
+/// Rule 6.6: A king capture loop can be made in either direction; both directions
+/// are the same move, and are generated once
+#[test]
+fn king_capture_loop_both_directions_generated_once() {
+    // King at B2, enemies at D2, F4, D6 and B4. Clockwise and counter-clockwise
+    // loops both capture all four pieces and end back on B2. (The king may also
+    // finish on B1 or B3; those are different moves.)
+    let board = Board::from_squares(
+        Team::White,
+        &[Square::B2],
+        &[Square::D2, Square::F4, Square::D6, Square::B4],
+        &[Square::B2],
+    );
+    let loops: Vec<_> = board
+        .actions()
+        .into_iter()
+        .filter(|a| a.delta.pieces[Team::White.to_usize()] == 0)
+        .collect();
+
+    assert_eq!(loops.len(), 1, "Both directions are the same move");
+    assert_eq!(loops[0].capture_count(Team::White), 4);
+    let path = loops[0].to_detailed(Team::White, &board.state);
+    assert_eq!(path.source(), Square::B2);
+    assert_eq!(path.destination(), Square::B2);
+    assert_eq!(path.path_len(), 5, "start + 4 landings");
+}
+
+/// A king capture loop has no own-piece delta, so `Action::source` cannot derive
+/// the square and must panic instead of returning garbage (use `to_detailed`)
+#[test]
+#[should_panic(expected = "king capture loop")]
+fn king_capture_loop_source_panics() {
+    let board = Board::from_squares(
+        Team::White,
+        &[Square::B2],
+        &[Square::D2, Square::F4, Square::D6, Square::B4],
+        &[Square::B2],
+    );
+    let king_loop = board
+        .actions()
+        .into_iter()
+        .find(|a| a.delta.pieces[Team::White.to_usize()] == 0)
+        .expect("king loop is legal");
+    let _ = king_loop.source(Team::White, board.state.pieces[Team::White.to_usize()]);
+}
+
+/// A king capture loop has no own-piece delta, so `Action::destination` cannot
+/// derive the square and must panic instead of returning garbage (use `to_detailed`)
+#[test]
+#[should_panic(expected = "king capture loop")]
+fn king_capture_loop_destination_panics() {
+    let board = Board::from_squares(
+        Team::White,
+        &[Square::B2],
+        &[Square::D2, Square::F4, Square::D6, Square::B4],
+        &[Square::B2],
+    );
+    let king_loop = board
+        .actions()
+        .into_iter()
+        .find(|a| a.delta.pieces[Team::White.to_usize()] == 0)
+        .expect("king loop is legal");
+    let _ = king_loop.destination(Team::White, board.state.pieces[Team::White.to_usize()]);
+}
+
 /// Rule 6.6: No distinction between men and kings when counting
 #[test]
 fn men_and_kings_count_equally() {

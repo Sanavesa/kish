@@ -406,6 +406,49 @@ fn king_backward_capture_is_not_blocked() {
     assert_eq!(board.status(), GameStatus::InProgress);
 }
 
+/// Same as above for Black: a boxed black king whose only legal move is a backward
+/// (upward) capture is not blocked.
+#[test]
+fn black_king_backward_capture_is_not_blocked() {
+    let board = Board::from_squares(
+        Team::Black,
+        &[Square::A2, Square::B2, Square::B3, Square::C1, Square::D1],
+        &[Square::A1, Square::B1],
+        &[Square::A1, Square::B1, Square::C1, Square::D1],
+    );
+    assert!(!board.actions().is_empty());
+    assert_eq!(board.status(), GameStatus::InProgress);
+}
+
+/// The opponent being blocked is not a result while it is our turn, with Black to
+/// move (vertical mirror of the White case in `board.rs`).
+#[test]
+fn opponent_blocked_on_black_turn_is_in_progress() {
+    // White men A4 and A5 are boxed in by Black, but it is Black's turn and most
+    // Black moves free them (e.g. c4-c3 allows a4xc4).
+    let board = Board::from_squares(
+        Team::Black,
+        &[Square::A4, Square::A5],
+        &[
+            Square::A7,
+            Square::A6,
+            Square::B5,
+            Square::B4,
+            Square::C5,
+            Square::C4,
+        ],
+        &[],
+    );
+    assert!(board.swap_turn().actions().is_empty(), "White is blocked");
+    assert_eq!(board.status(), GameStatus::InProgress);
+    let freeing = board
+        .actions()
+        .into_iter()
+        .filter(|a| !board.apply(a).swap_turn().actions().is_empty())
+        .count();
+    assert!(freeing > 0);
+}
+
 /// The opponent being blocked is not a result while it is our turn.
 #[test]
 fn opponent_blocked_on_our_turn_is_in_progress() {
