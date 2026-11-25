@@ -734,12 +734,17 @@ impl Action {
         let mut landings = [Square::A1; MAX_PATH_LEN - 1];
         let mut landing_count = 0;
 
+        // Pieces that stay on the board during the sequence (captured pieces are
+        // removed as they are taken; the moving piece has left its start square)
+        let blockers =
+            (original_state.pieces[0] | original_state.pieces[1]) & !src_mask & !captured_mask;
         let found = Self::reconstruct_capture_path(
             src,
             captured_mask,
             dest_mask,
             was_king,
             team,
+            blockers,
             None,
             &mut landings,
             &mut landing_count,
@@ -764,12 +769,15 @@ impl Action {
             // SAFETY: king_mask is a single set bit.
             let king = unsafe { Square::from_mask(king_mask) };
             let mut landing_count = 0;
+            let blockers =
+                (original_state.pieces[0] | original_state.pieces[1]) & !king_mask & !captured_mask;
             if Self::reconstruct_capture_path(
                 king,
                 captured_mask,
                 king_mask,
                 true,
                 team,
+                blockers,
                 None,
                 &mut landings,
                 &mut landing_count,
@@ -807,6 +815,7 @@ impl Action {
         final_dest_mask: u64,
         is_king: bool,
         team: Team,
+        blockers: u64,
         prev_direction: Option<(i8, i8)>,
         landings: &mut [Square; MAX_PATH_LEN - 1],
         landing_count: &mut usize,
@@ -864,11 +873,11 @@ impl Action {
                     let check_mask = check_sq.to_mask();
 
                     if let Some(captured) = found_capture {
-                        // We've passed a captured piece, this is a potential landing
-                        // Skip if landing on another capture target (can't land on pieces)
-                        if check_mask & remaining_captures != 0 {
-                            dist += 1;
-                            continue;
+                        // We've passed a captured piece, this is a potential landing.
+                        // Any piece beyond it (another capture target or a blocker) ends
+                        // the ray: a king can neither land on nor jump two pieces.
+                        if check_mask & (remaining_captures | blockers) != 0 {
+                            break;
                         }
 
                         // Try this landing square
@@ -890,6 +899,7 @@ impl Action {
                             final_dest_mask,
                             is_king,
                             team,
+                            blockers,
                             Some((row_dir, col_dir)),
                             landings,
                             landing_count,
@@ -902,6 +912,9 @@ impl Action {
                     } else if check_mask & remaining_captures != 0 {
                         // Found a captured piece
                         found_capture = Some(check_sq);
+                    } else if check_mask & blockers != 0 {
+                        // A piece that is not captured by this action blocks the ray
+                        break;
                     } else {
                         // Empty square before finding a capture - can't capture in this direction
                         // from this distance, but there might be a piece further along
@@ -926,7 +939,9 @@ impl Action {
                 let landing_sq =
                     unsafe { Square::from_row_column(landing_row as u8, landing_col as u8) };
 
-                if capture_sq.to_mask() & remaining_captures != 0 {
+                if capture_sq.to_mask() & remaining_captures != 0
+                    && landing_sq.to_mask() & (remaining_captures | blockers) == 0
+                {
                     let old_count = *landing_count;
                     debug_assert!(
                         *landing_count < MAX_PATH_LEN - 1,
@@ -945,6 +960,7 @@ impl Action {
                         final_dest_mask,
                         is_king,
                         team,
+                        blockers,
                         Some((row_dir, col_dir)),
                         landings,
                         landing_count,
