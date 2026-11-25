@@ -269,7 +269,12 @@ class Board:
         ...
 
     def apply(self, action: Action) -> Board:
-        """Applies an action and returns a new board with the turn swapped."""
+        """Applies an action and returns a new board with the turn swapped.
+
+        Raises:
+            ValueError: If the action is not legal in this position (e.g. it came
+                from another position or was already applied).
+        """
         ...
 
     def status(self) -> GameStatus:
@@ -400,7 +405,12 @@ class Game:
         ...
 
     def make_move(self, action: Action) -> None:
-        """Makes a move and updates the game state."""
+        """Makes a move and updates the game state.
+
+        Raises:
+            ValueError: If the action is not legal in this position (e.g. it came
+                from another position or was already played).
+        """
         ...
 
     def undo_move(self) -> bool:

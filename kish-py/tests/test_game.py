@@ -1,5 +1,7 @@
 """Tests for the Game class."""
 
+import pytest
+
 import kish
 
 
@@ -47,6 +49,22 @@ def test_game_make_move():
 
     assert game.turn == kish.Team.Black
     assert game.move_count == 1
+
+
+def test_game_make_move_rejects_illegal_action():
+    """Test Game.make_move() raises ValueError and leaves the game unchanged."""
+    game = kish.Game()
+    action = game.actions()[0]
+    game.make_move(action)
+    board = game.board()
+
+    # Playing the same action again used to revert it and corrupt the history
+    with pytest.raises(ValueError, match="illegal action"):
+        game.make_move(action)
+
+    assert game.board() == board
+    assert game.move_count == 1
+    assert game.halfmove_clock == 1
 
 
 def test_game_undo_move():

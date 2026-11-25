@@ -646,11 +646,13 @@ impl Board {
     }
 
     /// Applies an action and returns a new board with the turn swapped.
-    #[must_use]
-    fn apply(&self, action: &Action) -> Self {
+    ///
+    /// Raises `ValueError` if the action is not legal in this position.
+    fn apply(&self, action: &Action) -> PyResult<Self> {
+        check_legal(&self.inner, action)?;
         let mut new_board = self.inner.apply(&action.inner);
         new_board.swap_turn_();
-        Self { inner: new_board }
+        Ok(Self { inner: new_board })
     }
 
     /// Returns the current game status.
@@ -838,6 +840,28 @@ fn validate_state(state: &kish_core::State) -> PyResult<()> {
     Err(PyValueError::new_err(format!("invalid position: {error}")))
 }
 
+/// Rejects an action that is not one of the board's legal actions.
+///
+/// Actions are XOR deltas, so applying one from another position (or the same
+/// action twice) silently corrupts the board instead of failing.
+fn check_legal(board: &kish_core::Board, action: &Action) -> PyResult<()> {
+    if action.team != board.turn {
+        return Err(PyValueError::new_err(format!(
+            "illegal action {}: it is a {} move but {} is to move",
+            action.notation(),
+            action.team,
+            board.turn
+        )));
+    }
+    if !board.actions().contains(&action.inner) {
+        return Err(PyValueError::new_err(format!(
+            "illegal action {}: not a legal move in this position",
+            action.notation()
+        )));
+    }
+    Ok(())
+}
+
 impl Board {
     fn mask_to_squares(mask: u64) -> Vec<Square> {
         let mut squares = Vec::new();
@@ -953,8 +977,12 @@ impl Game {
     }
 
     /// Makes a move and updates the game state.
-    fn make_move(&mut self, action: &Action) {
+    ///
+    /// Raises `ValueError` if the action is not legal in this position.
+    fn make_move(&mut self, action: &Action) -> PyResult<()> {
+        check_legal(self.inner.board(), action)?;
         self.inner.make_move(&action.inner);
+        Ok(())
     }
 
     /// Undoes the last move. Returns true if a move was undone.

@@ -115,6 +115,27 @@ def test_board_apply():
     assert new_board.turn == kish.Team.Black
 
 
+def test_board_apply_rejects_illegal_action():
+    """Test Board.apply() raises ValueError for an action from another position."""
+    board = kish.Board()
+    action = board.actions()[0]
+    after = board.apply(action)
+
+    # Applying the same (White) action again on Black's turn used to undo it
+    with pytest.raises(ValueError, match="illegal action"):
+        after.apply(action)
+
+    # A White action from a different position, on White's turn
+    other = kish.Board.from_squares(
+        turn=kish.Team.White,
+        white_squares=[kish.Square.D4],
+        black_squares=[kish.Square.H7],
+        king_squares=[],
+    )
+    with pytest.raises(ValueError, match="not a legal move"):
+        board.apply(other.actions()[0])
+
+
 def test_board_status():
     """Test Board.status() returns game status."""
     board = kish.Board()
