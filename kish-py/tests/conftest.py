@@ -27,7 +27,7 @@ def promotion_position():
     return kish.Board.from_squares(
         turn=kish.Team.White,
         white_squares=[kish.Square.D7],
-        black_squares=[kish.Square.A1],
+        black_squares=[kish.Square.A2],
         king_squares=[],
     )
 

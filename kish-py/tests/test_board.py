@@ -1,5 +1,7 @@
 """Tests for the Board class."""
 
+import pytest
+
 import kish
 
 
@@ -42,6 +44,52 @@ def test_board_from_bitboards():
     assert board.turn == kish.Team.White
     assert board.white_bitboard() == white_bb
     assert board.black_bitboard() == black_bb
+
+
+D4, E5, A1, H8, D8 = 1 << 27, 1 << 36, 1 << 0, 1 << 63, 1 << 59
+
+
+@pytest.mark.parametrize(
+    "white, black, kings",
+    [
+        (D4, D4 | E5, 0),  # a square holds both colours
+        (D4, E5, D4 | (1 << 40)),  # king flag on an empty square
+        ((1 << 17) - 1, H8, 0),  # 17 white pieces
+        (D4, (1 << 17) - 1 << 40, 0),  # 17 black pieces
+        (D8, E5, 0),  # white man on its promotion row
+        (D4, A1, 0),  # black man on its promotion row
+    ],
+)
+def test_board_from_bitboards_rejects_invalid_positions(white, black, kings):
+    """Test Board.from_bitboards() raises ValueError for invalid positions."""
+    with pytest.raises(ValueError, match="invalid position"):
+        kish.Board.from_bitboards(turn=0, white=white, black=black, kings=kings)
+
+
+def test_board_from_squares_rejects_invalid_positions():
+    """Test Board.from_squares() raises ValueError for invalid positions."""
+    with pytest.raises(ValueError, match="both White and Black"):
+        kish.Board.from_squares(
+            turn=kish.Team.White,
+            white_squares=[kish.Square.D4],
+            black_squares=[kish.Square.D4],
+            king_squares=[],
+        )
+    with pytest.raises(ValueError, match="subset"):
+        kish.Board.from_squares(
+            turn=kish.Team.White,
+            white_squares=[kish.Square.D4],
+            black_squares=[kish.Square.E5],
+            king_squares=[kish.Square.F6],
+        )
+
+
+def test_board_from_bitboards_accepts_kings_on_promotion_rows():
+    """Test kings (unlike men) may stand on any row, and a side may be empty."""
+    board = kish.Board.from_bitboards(turn=0, white=D8, black=A1, kings=D8 | A1)
+    assert len(board.kings()) == 2
+    board = kish.Board.from_bitboards(turn=0, white=D4, black=0, kings=0)
+    assert board.status().winner() == kish.Team.White
 
 
 def test_board_actions():

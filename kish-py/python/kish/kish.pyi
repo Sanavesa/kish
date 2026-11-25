@@ -251,6 +251,11 @@ class Board:
             white_squares: List of squares with white pieces.
             black_squares: List of squares with black pieces.
             king_squares: List of squares that are kings (must be subset of pieces).
+
+        Raises:
+            ValueError: If the position is invalid: a square holds both colours, a
+                king is not on a piece, a side has more than 16 pieces, or a man is
+                on its own promotion row.
         """
         ...
 
@@ -352,7 +357,8 @@ class Board:
             kings: Kings bitboard (must be subset of white | black).
 
         Raises:
-            ValueError: If turn is not 0 or 1.
+            ValueError: If turn is not 0 or 1, or the position is invalid (see
+                `from_squares`).
         """
         ...
 

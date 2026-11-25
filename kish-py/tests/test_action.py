@@ -140,7 +140,7 @@ def test_action_is_promotion():
     board = kish.Board.from_squares(
         turn=kish.Team.White,
         white_squares=[kish.Square.D7],
-        black_squares=[kish.Square.A1],
+        black_squares=[kish.Square.A2],
         king_squares=[],
     )
     actions = board.actions()

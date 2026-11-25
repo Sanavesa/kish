@@ -611,14 +611,14 @@ impl Board {
         white_squares: Vec<Square>,
         black_squares: Vec<Square>,
         king_squares: Vec<Square>,
-    ) -> Self {
+    ) -> PyResult<Self> {
         let whites: Vec<kish_core::Square> = white_squares.into_iter().map(Into::into).collect();
         let blacks: Vec<kish_core::Square> = black_squares.into_iter().map(Into::into).collect();
         let kings: Vec<kish_core::Square> = king_squares.into_iter().map(Into::into).collect();
 
-        Self {
-            inner: kish_core::Board::from_squares(turn.into(), &whites, &blacks, &kings),
-        }
+        let inner = kish_core::Board::from_squares(turn.into(), &whites, &blacks, &kings);
+        validate_state(&inner.state)?;
+        Ok(Self { inner })
     }
 
     /// Returns the current team's turn.
@@ -776,8 +776,10 @@ impl Board {
             1 => kish_core::Team::Black,
             _ => return Err(PyValueError::new_err("turn must be 0 (White) or 1 (Black)")),
         };
+        let state = kish_core::State::new([white, black], kings);
+        validate_state(&state)?;
         Ok(Self {
-            inner: kish_core::Board::new(team, kish_core::State::new([white, black], kings)),
+            inner: kish_core::Board::new(team, state),
         })
     }
 
@@ -805,6 +807,35 @@ impl Board {
     fn __eq__(&self, other: &Self) -> bool {
         self.inner == other.inner
     }
+}
+
+/// Rejects positions the engine cannot represent or that cannot arise in a game.
+///
+/// The core only checks these invariants in debug builds, and an invalid position
+/// silently produces wrong moves (e.g. a stray king bit turns a man that later
+/// lands there into a king).
+fn validate_state(state: &kish_core::State) -> PyResult<()> {
+    const ROW_1: u64 = 0xFF;
+    const ROW_8: u64 = 0xFF << 56;
+    let [white, black] = state.pieces;
+    let men = !state.kings;
+
+    let error = if white & black != 0 {
+        "a square is occupied by both White and Black"
+    } else if state.kings & !(white | black) != 0 {
+        "kings must be a subset of white | black"
+    } else if white.count_ones() > 16 {
+        "White has more than 16 pieces"
+    } else if black.count_ones() > 16 {
+        "Black has more than 16 pieces"
+    } else if white & men & ROW_8 != 0 {
+        "a White man is on row 8 (it would already be a king)"
+    } else if black & men & ROW_1 != 0 {
+        "a Black man is on row 1 (it would already be a king)"
+    } else {
+        return Ok(());
+    };
+    Err(PyValueError::new_err(format!("invalid position: {error}")))
 }
 
 impl Board {

@@ -54,7 +54,7 @@ def test_game_status_won_black():
     board = kish.Board.from_squares(
         turn=kish.Team.White,
         white_squares=[],  # No white pieces
-        black_squares=[kish.Square.A1, kish.Square.B1],
+        black_squares=[kish.Square.A2, kish.Square.B2],
         king_squares=[],
     )
     status = board.status()
