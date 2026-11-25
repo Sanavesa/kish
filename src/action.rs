@@ -75,10 +75,10 @@ use crate::state::{MASK_COL_A, MASK_COL_H, MASK_ROW_1, MASK_ROW_8};
 const MAX_PATH_LEN: usize = 17;
 
 /// Lookup table for file letters (a-h).
-const FILE_CHARS: [u8; 8] = [b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h'];
+const FILE_CHARS: [u8; 8] = *b"abcdefgh";
 
 /// Lookup table for rank characters (1-8).
-const RANK_CHARS: [u8; 8] = [b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8'];
+const RANK_CHARS: [u8; 8] = *b"12345678";
 
 /// Detailed action representation with full path information for UI applications.
 ///
@@ -230,9 +230,9 @@ impl ActionPath {
         result.push(buf[1] as char);
 
         // Write remaining path with separators
-        for i in 1..self.path_len as usize {
+        for &square in &self.path[1..self.path_len as usize] {
             result.push(separator);
-            Self::square_to_notation(self.path[i], &mut buf);
+            Self::square_to_notation(square, &mut buf);
             result.push(buf[0] as char);
             result.push(buf[1] as char);
         }
@@ -281,12 +281,12 @@ impl ActionPath {
         pos += 2;
 
         // Write remaining path with separators
-        for i in 1..self.path_len as usize {
+        for square in &self.path[1..self.path_len as usize] {
             buf[pos] = separator;
             pos += 1;
 
-            let col = self.path[i].column();
-            let row = self.path[i].row();
+            let col = square.column();
+            let row = square.row();
             buf[pos] = FILE_CHARS[col as usize];
             buf[pos + 1] = RANK_CHARS[row as usize];
             pos += 2;

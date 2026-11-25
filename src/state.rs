@@ -186,13 +186,10 @@ impl State {
             "an empty square is marked as king"
         );
 
-        for team_index in 0..=1 {
+        for (team_index, pieces) in self.pieces.iter().enumerate() {
             let team = Team::from_usize(team_index);
 
-            debug_assert!(
-                self.pieces[team_index].count_ones() <= 16,
-                "more than 16 pieces for {team}",
-            );
+            debug_assert!(pieces.count_ones() <= 16, "more than 16 pieces for {team}",);
         }
     }
 
