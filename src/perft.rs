@@ -236,8 +236,6 @@ impl Board {
 
         // Create shared transposition table
         let tt = TranspositionTable::new(tt_capacity);
-        let tt_hits = AtomicU64::new(0);
-        let tt_lookups = AtomicU64::new(0);
 
         // Generate first-level actions
         let actions = self.actions();
@@ -257,27 +255,9 @@ impl Board {
                 let mut scratches: Vec<Vec<Action>> =
                     (1..depth).map(|_| Vec::with_capacity(48)).collect();
 
-                board.perft_tt_inner(
-                    depth - 1,
-                    &mut scratches,
-                    &mut count_scratch,
-                    &tt,
-                    &tt_hits,
-                    &tt_lookups,
-                )
+                board.perft_tt_inner(depth - 1, &mut scratches, &mut count_scratch, &tt)
             })
             .sum();
-
-        // Print TT hit statistics
-        let hits = tt_hits.load(Ordering::Relaxed);
-        let lookups = tt_lookups.load(Ordering::Relaxed);
-        if lookups > 0 {
-            let hit_rate = (hits as f64 / lookups as f64) * 100.0;
-            eprintln!(
-                "TT hits: {} / {} lookups ({:.2}% hit rate)",
-                hits, lookups, hit_rate
-            );
-        }
 
         nodes
     }
@@ -290,8 +270,6 @@ impl Board {
         scratches: &mut [Vec<Action>],
         count_scratch: &mut Vec<Action>,
         tt: &TranspositionTable,
-        tt_hits: &AtomicU64,
-        tt_lookups: &AtomicU64,
     ) -> u64 {
         // Bulk leaf optimization
         if depth == 1 {
@@ -301,9 +279,7 @@ impl Board {
 
         // TT lookup (only for depth >= 3 to avoid overhead)
         if depth >= 3 {
-            tt_lookups.fetch_add(1, Ordering::Relaxed);
             if let Some(nodes) = tt.get(self, depth as u8) {
-                tt_hits.fetch_add(1, Ordering::Relaxed);
                 return nodes;
             }
         }
@@ -320,8 +296,7 @@ impl Board {
             let action = scratches[idx][i];
             let mut board = self.apply(&action);
             board.swap_turn_();
-            nodes +=
-                board.perft_tt_inner(depth - 1, scratches, count_scratch, tt, tt_hits, tt_lookups);
+            nodes += board.perft_tt_inner(depth - 1, scratches, count_scratch, tt);
         }
 
         // Store in TT (only for depth >= 3)
