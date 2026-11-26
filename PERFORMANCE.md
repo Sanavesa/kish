@@ -2,7 +2,7 @@
 
 Optimization journey for the kish Turkish Draughts engine — from 1.7M to 365M nodes/sec (215x speedup).
 
-**Benchmark**: Perft depth 7 from initial position (10,782,382 leaf nodes)
+**Benchmark**: Perft depth 7 from initial position (10,782,382 leaf nodes at the time; 10,782,308 since v1.1.8 generates duplicate capture actions only once)
 
 ## v1.0.0 — 365M nodes/sec (32.3 ms)
 - Perft optimizations: scratch buffers, bulk counting, ray masks, `count_actions()`

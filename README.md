@@ -155,7 +155,7 @@ Benchmarks run on AMD Ryzen 9 3900X with `RUSTFLAGS="-C target-cpu=native"`. See
 |-------|------:|-----:|----------:|
 | 5 | 85,090 | 228 µs | 373M |
 | 6 | 931,312 | 2.7 ms | 341M |
-| 7 | 10,782,382 | 32.5 ms | 332M |
+| 7 | 10,782,308 | 32.5 ms | 332M |
 
 ### Scenario Benchmarks
 
