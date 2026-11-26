@@ -68,8 +68,8 @@ while not game.status().is_over():
         print("Draw by repetition!")
         break
 
-    if game.halfmove_clock >= 50:
-        print("Draw by 50-move rule!")
+    if game.halfmove_clock >= 150:
+        print("Draw: 150 plies without a capture!")
         break
 
 # Undo moves

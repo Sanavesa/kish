@@ -372,7 +372,7 @@ class Game:
 
     Use this when you need:
     - Threefold repetition detection
-    - 50-move rule (insufficient progress)
+    - 150 plies (75 moves) without capture (insufficient progress)
     - Undo functionality
 
     For pure move generation (AI, perft), use `Board` directly.

@@ -40,9 +40,9 @@ fn main() {
             break;
         }
 
-        // Check for 150-move rule
+        // Check for the 150-ply (75-move) no-capture rule
         if game.halfmove_clock() >= 150 {
-            println!("\nDraw by 150-move rule!");
+            println!("\nDraw: 150 plies without a capture!");
             break;
         }
     }

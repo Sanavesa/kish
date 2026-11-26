@@ -42,7 +42,7 @@ Turkish Draughts (Dama) is a variant of checkers with **orthogonal movement** (h
 - **Complete Rules** - Movement, captures, promotion, all draw conditions
 - **Bitboard Engine** - 64-bit representation for efficient computation
 - **~330M nodes/sec** - Optimized move generation and perft
-- **Draw Detection** - Threefold repetition and 50-move rule
+- **Draw Detection** - Threefold repetition and the 150-ply no-capture rule
 - **Algebraic Notation** - Standard move notation support
 
 ## Installation
@@ -204,7 +204,7 @@ See [RULES.md](RULES.md) for the complete official rules.
 ### Draw Conditions
 - One piece each (automatic draw)
 - Threefold repetition (same position 3 times)
-- 50 plies without capture (insufficient progress)
+- 150 plies (75 moves) without capture (insufficient progress)
 
 ## Python Bindings
 
