@@ -133,6 +133,7 @@ impl From<Team> for kish_core::Team {
 /// ```
 #[pyclass(eq, eq_int, frozen, hash)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(u8)] // must match kish_core::Square: the From impls transmute between them
 #[allow(missing_docs)]
 pub enum Square {
     A1 = 0,
@@ -275,6 +276,10 @@ impl Square {
         self.notation()
     }
 }
+
+// The transmutes below rely on identical layout: both enums are #[repr(u8)] with
+// discriminants 0-63 in the same order.
+const _: () = assert!(std::mem::size_of::<Square>() == 1);
 
 impl From<kish_core::Square> for Square {
     fn from(sq: kish_core::Square) -> Self {

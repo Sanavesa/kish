@@ -102,6 +102,21 @@ def test_square_from_mask_invalid():
         kish.Square.from_mask(3)  # Multiple bits set
 
 
+def test_square_roundtrip_through_engine():
+    """Test every square converts to and from the engine unchanged."""
+    for index in range(64):
+        square = kish.Square.from_mask(1 << index)
+        assert square.to_mask() == 1 << index
+        assert square.row() * 8 + square.col() == index
+        board = kish.Board.from_squares(
+            turn=kish.Team.White,
+            white_squares=[square],
+            black_squares=[],
+            king_squares=[square],
+        )
+        assert board.white_pieces() == [square]
+
+
 def test_square_hash():
     """Test Square is hashable."""
     squares = {kish.Square.A1, kish.Square.H8}
